@@ -83,6 +83,7 @@ if (Meteor.isServer) {
         // Default indexes, only when not remotely connected!
         this._ensureIndex({ type : 1, status : 1 });
         this._ensureIndex({ priority : 1, retryUntil : 1, after : 1 });
+        this._ensureIndex({ depends : 1 });
         this.isSimulation = false;
         const localMethods = this._generateMethods();
         if (this._localServerMethods == null) { this._localServerMethods = {}; }

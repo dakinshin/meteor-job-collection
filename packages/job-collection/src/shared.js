@@ -12,7 +12,8 @@
   //     See included LICENSE file for details.
   //###########################################################################
 
-  import Job from '../job/src/job_class';
+import Job from '../job/src/job_class';
+import later from 'later'
 
 const _validNumGTEZero = v => Match.test(v, Number) && (v >= 0.0);
 

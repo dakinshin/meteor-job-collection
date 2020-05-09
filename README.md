@@ -1,12 +1,8 @@
 # job-collection
 
-[![Build Status](https://travis-ci.org/SimonSimCity/meteor-job-collection.svg)](https://travis-ci.org/simonsimcity/meteor-job-collection)
-
 ## Notice!
 
-
-
-#### **This is fork was made to have this package available on meteor 1.6.1 (where we needed to make up with coffeescript 1). It will be maintained by me as I need it for my project. I'm happy to take a look at your contribution if you send me a PR.**
+#### **This is fork was made to have this package available on meteor 1.10.2, remove the coffescrip dependency and use the npm version of later.js. It will be maintained by me as I need it for my project. I'm happy to take a look at your contribution if you send me a PR.**
 
 ## Intro
 

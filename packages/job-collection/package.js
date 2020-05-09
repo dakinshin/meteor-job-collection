@@ -4,21 +4,24 @@
 ###     See included LICENSE file for details.
 ***************************************************************************/
 
-var currentVersion = '1.6.1';
+var currentVersion = '1.7.0';
 
 Package.describe({
   summary: "A persistent and reactive job queue for Meteor, supporting distributed workers that can run anywhere",
-  name: 'simonsimcity:job-collection',
+  name: 'thebakery:job-collection',
   version: currentVersion,
   documentation: '../../README.md',
-  git: 'https://github.com/simonsimcity/meteor-job-collection.git'
+  git: 'https://github.com/bakery/meteor-job-collection.git'
 });
 
+
 Package.onUse(function(api) {
-  api.use('mrt:later@1.6.1', ['server','client']);
-  api.use('ecmascript@0.9.0', ['server','client']);
-  api.use('mongo@1.1.18', ['server','client']);
-  api.use('check@1.2.5', ['server','client']);
+  Npm.depends({ later: '1.2.0' });
+  api.use([
+    'ecmascript',
+    'mongo',
+    'check'
+  ]);
   api.mainModule('src/server.js', 'server');
   api.mainModule('src/client.js', 'client');
 
@@ -29,14 +32,16 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function (api) {
-  api.use('simonsimcity:job-collection@' + currentVersion, ['server','client']);
-  api.use('mrt:later@1.6.1', ['server','client']);
-  api.use('ecmascript@0.9.0', ['server','client']);
-  api.use('check@1.2.5', ['server','client']);
-  api.use('meteortesting:mocha@1.0.0', ['server','client']);
-  api.use('ddp@1.2.5', 'client');
-
+  api.use([
+    'thebakery:job-collection@' + currentVersion,
+    'ecmascript',
+    'check',
+    'meteortesting:mocha@1.0.0',
+  ]);
+  api.use('ddp', 'client');
+  
   Npm.depends({
+    later: '1.2.0',
     chai: '4.1.2',
   });
 

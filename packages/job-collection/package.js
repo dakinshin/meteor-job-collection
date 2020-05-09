@@ -18,9 +18,9 @@ Package.describe({
 Package.onUse(function(api) {
   Npm.depends({ later: '1.2.0' });
   api.use([
-    'ecmascript',
-    'mongo',
-    'check'
+    'ecmascript@0.14.3',
+    'mongo@1.10.0',
+    'check@1.3.1'
   ]);
   api.mainModule('src/server.js', 'server');
   api.mainModule('src/client.js', 'client');
@@ -34,8 +34,8 @@ Package.onUse(function(api) {
 Package.onTest(function (api) {
   api.use([
     'thebakery:job-collection@' + currentVersion,
-    'ecmascript',
-    'check',
+    'ecmascript@0.14.3',
+    'check@1.3.1',
     'meteortesting:mocha@1.0.0',
   ]);
   api.use('ddp', 'client');

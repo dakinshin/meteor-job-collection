@@ -1,3 +1,0 @@
-[submodule "packages/job-collection/job"]
-	path = packages/job-collection/job
-	url=https://github.com/SimonSimCity/meteor-job

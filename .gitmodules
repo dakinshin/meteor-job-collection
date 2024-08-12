@@ -1,0 +1,3 @@
+[submodule "packages/job-collection/job"]
+	path = packages/job-collection/job
+	url = git@github.com:dakinshin/meteor-job.git

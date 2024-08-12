@@ -13,7 +13,7 @@
   //###########################################################################
 
 import Job from '../job/src/job_class';
-import later from 'later'
+import later from '@breejs/later'
 
 const _validNumGTEZero = v => Match.test(v, Number) && (v >= 0.0);
 
@@ -292,7 +292,7 @@ class JobCollectionBase extends Mongo.Collection {
     return methodsOut;
   }
 
-  _idsOfDeps(ids, antecedents, dependents, jobStatuses) {
+  async _idsOfDeps(ids, antecedents, dependents, jobStatuses) {
     // Cancel the entire tree of antecedents and/or dependents
     // Dependents: jobs that list one of the ids in their depends list
     // Antecedents: jobs with an id listed in the depends list of one of the jobs in ids
@@ -309,7 +309,7 @@ class JobCollectionBase extends Mongo.Collection {
     }
     if (antecedents) {
       const antsArray = [];
-      this.find(
+      await this.find(
         {
           _id: {
             $in: ids
@@ -321,7 +321,7 @@ class JobCollectionBase extends Mongo.Collection {
           },
           transform: null
         }
-      ).forEach(function(d) {
+      ).forEachAsync(function(d) {
         let i;
         if (!antsArray.includes(i)) {
           d.depends.forEach(d2 => {
@@ -339,7 +339,7 @@ class JobCollectionBase extends Mongo.Collection {
       }
     }
     if (dependsQuery.length > 0) {
-      this.find(
+      await this.find(
         {
           status: {
             $in: jobStatuses
@@ -352,14 +352,14 @@ class JobCollectionBase extends Mongo.Collection {
           },
           transform: null
         }
-      ).forEach(function(d) {
+      ).forEachAsync(function(d) {
         if (!dependsIds.includes(d._id)) { return dependsIds.push(d._id); }
       });
     }
     return dependsIds;
   }
 
-  _rerun_job(doc, repeats = doc.repeats - 1, wait = doc.repeatWait, repeatUntil = doc.repeatUntil) {
+  async _rerun_job(doc, repeats = doc.repeats - 1, wait = doc.repeatWait, repeatUntil = doc.repeatUntil) {
     // Repeat? if so, make a new job from the old one
     let jobId, logObj;
     const id = doc._id;
@@ -395,8 +395,8 @@ class JobCollectionBase extends Mongo.Collection {
     }
 
     doc.after = new Date(time.valueOf() + wait);
-    if (jobId = this.insert(doc)) {
-      this._DDPMethod_jobReady(jobId);
+    if (jobId = await this.insertAsync(doc)) {
+      await this._DDPMethod_jobReady(jobId);
       return jobId;
     } else {
       console.warn("Job rerun/repeat failed to reschedule!", id, runId);
@@ -404,7 +404,7 @@ class JobCollectionBase extends Mongo.Collection {
     return null;
   }
 
-  _checkDeps(job, dryRun = true) {
+  async _checkDeps(job, dryRun = true) {
     let cancel = false;
     const resolved = [];
     const failed = [];
@@ -412,13 +412,13 @@ class JobCollectionBase extends Mongo.Collection {
     const removed = [];
     const log = [];
     if (job.depends.length > 0) {
-      const deps = this.find({_id: { $in: job.depends }},{ fields: { _id: 1, runId: 1, status: 1 } }).fetch();
+      const deps = await this.find({_id: { $in: job.depends }},{ fields: { _id: 1, runId: 1, status: 1 } }).fetchAsync();
 
       if (deps.length !== job.depends.length) {
         const foundIds = deps.map(d => d._id);
         for (let j of job.depends) {
           if (!(foundIds.includes(j))) {
-            if (!dryRun) { this._DDPMethod_jobLog(job._id, null, `Antecedent job ${j} missing at save`); }
+            if (!dryRun) { await this._DDPMethod_jobLog(job._id, null, `Antecedent job ${j} missing at save`); }
             removed.push(j);
             }
         }
@@ -435,12 +435,12 @@ class JobCollectionBase extends Mongo.Collection {
             case "failed":
               cancel = true;
               failed.push(depJob._id);
-              if (!dryRun) { this._DDPMethod_jobLog(job._id, null, "Antecedent job failed before save"); }
+              if (!dryRun) { await this._DDPMethod_jobLog(job._id, null, "Antecedent job failed before save"); }
               break;
             case "cancelled":
               cancel = true;
               cancelled.push(depJob._id);
-              if (!dryRun) { this._DDPMethod_jobLog(job._id, null, "Antecedent job cancelled before save"); }
+              if (!dryRun) { await this._DDPMethod_jobLog(job._id, null, "Antecedent job cancelled before save"); }
               break;
             default:  // Unknown status
               throw new Meteor.Error("Unknown status in jobSave Dependency check");
@@ -465,7 +465,7 @@ class JobCollectionBase extends Mongo.Collection {
           }
         };
 
-        const n = this.update(
+        const n = await this.updateAsync(
           {
             _id: job._id,
             status: 'waiting'
@@ -479,7 +479,7 @@ class JobCollectionBase extends Mongo.Collection {
       }
 
       if (cancel && !dryRun) {
-        this._DDPMethod_jobCancel(job._id);
+        await this._DDPMethod_jobCancel(job._id);
         return false;
       }
     }
@@ -546,7 +546,7 @@ class JobCollectionBase extends Mongo.Collection {
     return true;
   }
 
-  _DDPMethod_getJob(ids, options) {
+  async _DDPMethod_getJob(ids, options) {
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({
       getLog: Match.Optional(Boolean),
@@ -565,7 +565,7 @@ class JobCollectionBase extends Mongo.Collection {
     const fields = {_private:0};
     if (!options.getLog) { fields.log = 0; }
     if (!options.getFailures) { fields.failures = 0; }
-    let docs = this.find(
+    let docs = await this.find(
       {
         _id: {
           $in: ids
@@ -575,7 +575,7 @@ class JobCollectionBase extends Mongo.Collection {
         fields,
         transform: null
       }
-    ).fetch();
+    ).fetchAsync();
     if (docs != null ? docs.length : undefined) {
       if (this.scrub != null) {
         docs = docs.map(d => this.scrub(d));
@@ -590,7 +590,7 @@ class JobCollectionBase extends Mongo.Collection {
     return null;
   }
 
-  _DDPMethod_getWork(type, options) {
+  async _DDPMethod_getWork(type, options) {
     let d;
     check(type, Match.OneOf(String, [ String ]));
     check(options, Match.Optional({
@@ -622,7 +622,7 @@ class JobCollectionBase extends Mongo.Collection {
     while (docs.length < options.maxJobs) {
 
       var logObj;
-      const ids = this.find(
+      const ids = await this.find(
         {
           type: {
             $in: type
@@ -641,9 +641,9 @@ class JobCollectionBase extends Mongo.Collection {
             _id: 1
           },
           transform: null
-        }).map(d => d._id);
+        }).mapAsync(d => d._id);
 
-      if (!((ids != null ? ids.length : undefined) > 0)) {
+        if (!((ids != null ? ids.length : undefined) > 0)) {
         break;  // Don't keep looping when there's no available work
       }
 
@@ -673,7 +673,7 @@ class JobCollectionBase extends Mongo.Collection {
         mods.$unset.expiresAfter = "";
       }
 
-      const num = this.update(
+      const num = await this.updateAsync(
         {
           _id: {
             $in: ids
@@ -688,7 +688,7 @@ class JobCollectionBase extends Mongo.Collection {
       );
 
       if (num > 0) {
-        var foundDocs = this.find(
+        var foundDocs = await this.find(
           {
             _id: {
               $in: ids
@@ -703,7 +703,7 @@ class JobCollectionBase extends Mongo.Collection {
             },
             transform: null
           }
-        ).fetch();
+        ).fetchAsync();
 
         if ((foundDocs != null ? foundDocs.length : undefined) > 0) {
           if (this.scrub != null) {
@@ -719,7 +719,7 @@ class JobCollectionBase extends Mongo.Collection {
     return docs;
   }
 
-  _DDPMethod_jobRemove(ids, options) {
+  async _DDPMethod_jobRemove(ids, options) {
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({}));
     if (options == null) { options = {}; }
@@ -727,7 +727,7 @@ class JobCollectionBase extends Mongo.Collection {
       ids = [ids];
     }
     if (ids.length === 0) { return false; }
-    const num = this.remove(
+    const num = await this.removeAsync(
       {
         _id: {
           $in: ids
@@ -745,7 +745,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobPause(ids, options) {
+  async _DDPMethod_jobPause(ids, options) {
     let logObj;
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({}));
@@ -768,7 +768,7 @@ class JobCollectionBase extends Mongo.Collection {
         {log: logObj};
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: {
           $in: ids
@@ -790,7 +790,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobResume(ids, options) {
+  async _DDPMethod_jobResume(ids, options) {
     let logObj;
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({}));
@@ -812,7 +812,7 @@ class JobCollectionBase extends Mongo.Collection {
         {log: logObj};
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: {
           $in: ids
@@ -828,7 +828,7 @@ class JobCollectionBase extends Mongo.Collection {
       }
     );
     if (num > 0) {
-      this._DDPMethod_jobReady(ids);
+      await this._DDPMethod_jobReady(ids);
       return true;
     } else {
       console.warn("jobResume failed");
@@ -836,7 +836,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobReady(ids, options) {
+  async _DDPMethod_jobReady(ids, options) {
     let l;
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({
@@ -904,7 +904,7 @@ class JobCollectionBase extends Mongo.Collection {
       };
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       query,
       mods,
       {
@@ -919,7 +919,7 @@ class JobCollectionBase extends Mongo.Collection {
     }
   }
 
-  _DDPMethod_jobCancel(ids, options) {
+  async _DDPMethod_jobCancel(ids, options) {
     let logObj;
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({
@@ -954,7 +954,7 @@ class JobCollectionBase extends Mongo.Collection {
         {log: logObj};
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: {
           $in: ids
@@ -969,11 +969,11 @@ class JobCollectionBase extends Mongo.Collection {
       }
     );
     // Cancel the entire tree of dependents
-    const cancelIds = this._idsOfDeps(ids, options.antecedents, options.dependents, this.jobStatusCancellable);
+    const cancelIds = await this._idsOfDeps(ids, options.antecedents, options.dependents, this.jobStatusCancellable);
 
     let depsCancelled = false;
     if (cancelIds.length > 0) {
-      depsCancelled = this._DDPMethod_jobCancel(cancelIds, options);
+      depsCancelled = await this._DDPMethod_jobCancel(cancelIds, options);
     }
 
     if ((num > 0) || depsCancelled) {
@@ -984,7 +984,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobRestart(ids, options) {
+  async _DDPMethod_jobRestart(ids, options) {
     let logObj;
     check(ids, Match.OneOf(Match.Where(_validId), [ Match.Where(_validId) ]));
     check(options, Match.Optional({
@@ -1038,18 +1038,18 @@ class JobCollectionBase extends Mongo.Collection {
       mods.$set.retryUntil = options.until;
     }
 
-    const num = this.update(query, mods, {multi: true});
+    const num = await this.updateAsync(query, mods, {multi: true});
 
     // Restart the entire tree of dependents
-    const restartIds = this._idsOfDeps(ids, options.antecedents, options.dependents, this.jobStatusRestartable);
+    const restartIds = await this._idsOfDeps(ids, options.antecedents, options.dependents, this.jobStatusRestartable);
 
     let depsRestarted = false;
     if (restartIds.length > 0) {
-      depsRestarted = this._DDPMethod_jobRestart(restartIds, options);
+      depsRestarted = await this._DDPMethod_jobRestart(restartIds, options);
     }
 
     if ((num > 0) || depsRestarted) {
-      this._DDPMethod_jobReady(ids);
+      await this._DDPMethod_jobReady(ids);
       return true;
     } else {
       console.warn("jobRestart failed");
@@ -1059,7 +1059,7 @@ class JobCollectionBase extends Mongo.Collection {
 
   // Job creator methods
 
-  _DDPMethod_jobSave(doc, options) {
+  async _DDPMethod_jobSave(doc, options) {
     check(doc, _validJobDoc());
     check(options, Match.Optional({
       cancelRepeats: Match.Optional(Boolean)})
@@ -1127,7 +1127,7 @@ class JobCollectionBase extends Mongo.Collection {
           {log: logObj};
       }
 
-      const num = this.update(
+      const num = await this.updateAsync(
         {
           _id: doc._id,
           status: 'paused',
@@ -1136,8 +1136,8 @@ class JobCollectionBase extends Mongo.Collection {
         mods
       );
 
-      if (num && this._checkDeps(doc, false)) {
-        this._DDPMethod_jobReady(doc._id);
+      if (num && await this._checkDeps(doc, false)) {
+        await this._DDPMethod_jobReady(doc._id);
         return doc._id;
       } else {
         return null;
@@ -1159,9 +1159,9 @@ class JobCollectionBase extends Mongo.Collection {
       }
       doc.created = time;
       doc.log.push(this._logMessage.submitted());
-      doc._id = this.insert(doc);
-      if (doc._id && this._checkDeps(doc, false)) {
-        this._DDPMethod_jobReady(doc._id);
+      doc._id = await this.insertAsync(doc);
+      if (doc._id && await this._checkDeps(doc, false)) {
+        await this._DDPMethod_jobReady(doc._id);
         return doc._id;
       } else {
         return null;
@@ -1171,7 +1171,7 @@ class JobCollectionBase extends Mongo.Collection {
 
   // Worker methods
 
-  _DDPMethod_jobProgress(id, runId, completed, total, options) {
+  async _DDPMethod_jobProgress(id, runId, completed, total, options) {
     check(id, Match.Where(_validId));
     check(runId, Match.Where(_validId));
     check(completed, Match.Where(_validNumGTEZero));
@@ -1195,7 +1195,7 @@ class JobCollectionBase extends Mongo.Collection {
 
     const time = new Date();
 
-    const job = this.findOne({ _id: id }, { fields: { workTimeout: 1 } });
+    const job = await this.findOneAsync({ _id: id }, { fields: { workTimeout: 1 } });
 
     const mods = {
       $set: {
@@ -1208,7 +1208,7 @@ class JobCollectionBase extends Mongo.Collection {
       mods.$set.expiresAfter = new Date(time.valueOf() + job.workTimeout);
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: id,
         runId,
@@ -1225,7 +1225,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobLog(id, runId, message, options) {
+  async _DDPMethod_jobLog(id, runId, message, options) {
     check(id, Match.Where(_validId));
     check(runId, Match.OneOf(Match.Where(_validId), null));
     check(message, String);
@@ -1244,7 +1244,7 @@ class JobCollectionBase extends Mongo.Collection {
     };
     if (options.data != null) { logObj.data = options.data; }
 
-    const job = this.findOne({ _id: id }, { fields: { status: 1, workTimeout: 1 } });
+    const job = await this.findOneAsync({ _id: id }, { fields: { status: 1, workTimeout: 1 } });
 
     const mods = {
       $push: {
@@ -1259,7 +1259,7 @@ class JobCollectionBase extends Mongo.Collection {
       mods.$set.expiresAfter = new Date(time.valueOf() + job.workTimeout);
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: id
       },
@@ -1273,7 +1273,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobRerun(id, options) {
+  async _DDPMethod_jobRerun(id, options) {
     check(id, Match.Where(_validId));
     check(options, Match.Optional({
       repeats: Match.Optional(Match.Where(_validIntGTEZero)),
@@ -1282,7 +1282,7 @@ class JobCollectionBase extends Mongo.Collection {
     })
     );
 
-    const doc = this.findOne(
+    const doc = await this.findOneAsync(
       {
         _id: id,
         status: "completed"
@@ -1307,13 +1307,13 @@ class JobCollectionBase extends Mongo.Collection {
       if (options.repeats > this.forever) { options.repeats = this.forever; }
       if (options.until == null) { options.until = doc.repeatUntil; }
       if (options.wait == null) { options.wait = 0; }
-      return this._rerun_job(doc, options.repeats, options.wait, options.until);
+      return await this._rerun_job(doc, options.repeats, options.wait, options.until);
     }
 
     return false;
   }
 
-  _DDPMethod_jobDone(id, runId, result, options) {
+  async _DDPMethod_jobDone(id, runId, result, options) {
     let logObj;
     check(id, Match.Where(_validId));
     check(runId, Match.Where(_validId));
@@ -1326,7 +1326,7 @@ class JobCollectionBase extends Mongo.Collection {
 
     if (options == null) { options = { repeatId: false }; }
     const time = new Date();
-    const doc = this.findOne(
+    const doc = await this.findOneAsync(
       {
         _id: id,
         runId,
@@ -1368,7 +1368,7 @@ class JobCollectionBase extends Mongo.Collection {
         {log: logObj};
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: id,
         runId,
@@ -1403,7 +1403,7 @@ class JobCollectionBase extends Mongo.Collection {
       }
 
       // Resolve depends
-      const ids = this.find(
+      const ids = (await this.find(
         {
           depends: {
             $all: [ id ]
@@ -1415,7 +1415,7 @@ class JobCollectionBase extends Mongo.Collection {
             _id: 1
           }
         }
-      ).fetch().map(d => d._id);
+      ).fetchAsync()).map(d => d._id);
 
       if (ids.length > 0) {
 
@@ -1438,7 +1438,7 @@ class JobCollectionBase extends Mongo.Collection {
           mods.$push.log = logObj;
         }
 
-        const n = this.update(
+        const n = await this.updateAsync(
           {
             _id: {
               $in: ids
@@ -1453,7 +1453,7 @@ class JobCollectionBase extends Mongo.Collection {
           console.warn(`Not all dependent jobs were resolved ${ids.length} > ${n}`);
         }
         // Try to promote any jobs that just had a dependency resolved
-        this._DDPMethod_jobReady(ids);
+        await this._DDPMethod_jobReady(ids);
       }
       if (options.repeatId && (jobId != null)) {
         return jobId;
@@ -1466,7 +1466,7 @@ class JobCollectionBase extends Mongo.Collection {
     return false;
   }
 
-  _DDPMethod_jobFail(id, runId, err, options) {
+  async _DDPMethod_jobFail(id, runId, err, options) {
     let logObj;
     check(id, Match.Where(_validId));
     check(runId, Match.Where(_validId));
@@ -1479,7 +1479,7 @@ class JobCollectionBase extends Mongo.Collection {
     if (options.fatal == null) { options.fatal = false; }
 
     const time = new Date();
-    const doc = this.findOne(
+    const doc = await this.findOneAsync(
       {
         _id: id,
         runId,
@@ -1535,7 +1535,7 @@ class JobCollectionBase extends Mongo.Collection {
       mods.$push.log = logObj;
     }
 
-    const num = this.update(
+    const num = await this.updateAsync(
       {
         _id: id,
         runId,

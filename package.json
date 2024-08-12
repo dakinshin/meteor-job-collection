@@ -1,5 +1,5 @@
 {
-  "name": "meteor-job-collection-test",
+  "name": "meteor-job-collection",
   "private": true,
   "scripts": {
     "coverage": "npm run coverage:app-unit && npm run coverage:app-full && npm run coverage:html",
@@ -17,5 +17,6 @@
     "chai": "^4.1.2",
     "istanbul": "^0.4.5",
     "phantomjs-prebuilt": "^2.1.16"
-  }
+  },
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }

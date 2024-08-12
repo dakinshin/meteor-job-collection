@@ -4,10 +4,10 @@
 ###     See included LICENSE file for details.
 ***************************************************************************/
 
-var currentVersion = '1.7.0';
+var currentVersion = '3.0.1';
 
 Package.describe({
-  summary: "A persistent and reactive job queue for Meteor, supporting distributed workers that can run anywhere",
+  summary: "A persistent and reactive job queue for Meteor, supporting distributed workers that can run anywhere. Meteor 3 compatible.",
   name: 'dakinshin:job-collection',
   version: currentVersion,
   documentation: '../../README.md',

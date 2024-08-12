@@ -2,7 +2,16 @@
 
 ## Notice!
 
-#### **This is fork was made to have this package available on meteor 1.10.2, remove the coffescrip dependency and use the npm version of later.js. It will be maintained by me as I need it for my project. I'm happy to take a look at your contribution if you send me a PR.**
+#### **This is fork was made to have this package available on Meteor 3**
+
+Based on [original project](https://github.com/vsivsi/meteor-job-collection) by [Vaughn Iverson aka vsivsi](https://github.com/vsivsi)
+
+Project is not covered with tests yet
+
+## Roadmap
+
+* Add typescript definitions
+* Implement tests on Meteor 3
 
 ## Intro
 

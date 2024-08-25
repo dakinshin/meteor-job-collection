@@ -242,7 +242,7 @@ independently from Meteor (as shown in the example code above).
 
 To add to your project, run:
 
-    meteor add simonsimcity:job-collection
+    meteor add tars:job-collection
 
 The package exposes a global object `JobCollection` on both client and server.
 

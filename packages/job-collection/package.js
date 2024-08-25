@@ -7,8 +7,8 @@
 var currentVersion = '3.0.1';
 
 Package.describe({
-  summary: "A persistent and reactive job queue for Meteor, supporting distributed workers that can run anywhere. Meteor 3 compatible.",
-  name: 'dakinshin:job-collection',
+  summary: "A persistent and reactive job queue for Meteor 3, with distributed workers that can run anywhere",
+  name: 'tars:job-collection',
   version: currentVersion,
   documentation: '../../README.md',
   git: 'git@github.com:dakinshin/meteor-job-collection.git'

@@ -1,0 +1,9 @@
+{
+  "name": "job-collection",
+  "version": "3.0.3",
+  "description": "A persistent and reactive job queue for Meteor 3, with distributed workers that can run anywhere",
+  "keywords": [],
+  "readmeFilename": "README.md",
+  "author": "Dmitriy Akinshin",
+  "license": "MIT"
+}
